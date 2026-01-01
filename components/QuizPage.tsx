@@ -194,7 +194,7 @@ export function QuizPage({ questions, onBack, onRestart }: QuizPageProps) {
           </span>
 
           {/* Question Text */}
-          <h3 style={{ marginBottom: 'var(--space-2xl)', lineHeight: 1.5 }}>
+          <h3 style={{ marginBottom: 'var(--space-2xl)', lineHeight: 1.5, color: 'var(--text-primary)' }}>
             {currentQuestion.question}
           </h3>
 
