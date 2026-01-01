@@ -13,6 +13,13 @@ function getGeminiClient() {
 }
 
 /**
+ * Get model name from environment variable or use default
+ */
+function getModelName(): string {
+  return process.env.GEMINI_MODEL || 'gemini-2.0-flash-exp';
+}
+
+/**
  * Generate yearly recap from chat content
  */
 export async function generateRecap(
@@ -20,7 +27,7 @@ export async function generateRecap(
   year: number
 ): Promise<RecapData> {
   const genAI = getGeminiClient();
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+  const model = genAI.getGenerativeModel({ model: getModelName() });
   
   const prompt = `你是一位專業的對話分析師，請分析以下 LINE 對話紀錄，生成 ${year} 年度回顧報告。
 
@@ -98,7 +105,7 @@ export async function generateQuiz(
   count: number = 5
 ): Promise<QuizQuestion[]> {
   const genAI = getGeminiClient();
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+  const model = genAI.getGenerativeModel({ model: getModelName() });
   
   const prompt = `你是一位有趣的題目設計師，請根據以下 LINE 對話紀錄生成 ${count} 道選擇題，用來測試參與者對這段對話的記憶。
 
