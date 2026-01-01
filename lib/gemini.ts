@@ -16,7 +16,7 @@ function getGeminiClient() {
  * Get model name from environment variable or use default
  */
 function getModelName(): string {
-  return process.env.GEMINI_MODEL || 'gemini-2.0-flash-exp';
+  return process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 }
 
 /**
