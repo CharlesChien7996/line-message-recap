@@ -212,7 +212,8 @@ export function extractAvailableYears(content: string): number[] {
     /^(\d{4})\/\d{1,2}\/\d{1,2}（/gm,          // 2024/12/25（
     /^(\d{4})\.\d{1,2}\.\d{1,2}\s/gm,         // 2024.12.25 
     /^(\d{4})-\d{1,2}-\d{1,2}\s/gm,           // 2024-12-25
-    /^[一二三四五六日],\s*\d{1,2}\/\d{1,2}\/(\d{4})/gm,  // 五, 11/29/2024 (mobile format)
+    /^[一二三四五六日],\s*\d{1,2}\/\d{1,2}\/(\d{4})/gm,  // 五, 11/29/2024 (Chinese)
+    /^[A-Za-z]+,?\s*\d{1,2}\/\d{1,2}\/(\d{4})/gm,       // Thu, 01/23/2025 (English)
     /\d{1,2}\/\d{1,2}\/(\d{4})/g,             // MM/DD/YYYY anywhere
   ];
   
@@ -269,7 +270,8 @@ export function filterContentByYear(content: string, year: number): string {
     {pattern: /^(\d{4})\/\d{1,2}\/\d{1,2}（/, yearGroup: 1},            // 2024/12/25（
     {pattern: /^(\d{4})\.\d{1,2}\.\d{1,2}\s/, yearGroup: 1},           // 2024.12.25 
     {pattern: /^(\d{4})-\d{1,2}-\d{1,2}\s/, yearGroup: 1},             // 2024-12-25
-    {pattern: /^[一二三四五六日],\s*\d{1,2}\/\d{1,2}\/(\d{4})/, yearGroup: 1},  // 五, 11/29/2024 (mobile format)
+    {pattern: /^[一二三四五六日],\s*\d{1,2}\/\d{1,2}\/(\d{4})/, yearGroup: 1},  // 五, 11/29/2024
+    {pattern: /^[A-Za-z]+,?\s*\d{1,2}\/\d{1,2}\/(\d{4})/, yearGroup: 1},       // Thu, 01/23/2025
   ];
   
   for (const line of lines) {
