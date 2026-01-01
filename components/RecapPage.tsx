@@ -1,4 +1,6 @@
-import type { RecapData } from '../types';
+'use client';
+
+import type { RecapData } from '@/types';
 
 interface RecapPageProps {
   data: RecapData;

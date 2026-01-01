@@ -1,5 +1,7 @@
+'use client';
+
+import type { QuizQuestion } from '@/types';
 import { useState } from 'react';
-import type { QuizQuestion } from '../types';
 
 interface QuizPageProps {
   questions: QuizQuestion[];

@@ -1,58 +1,75 @@
-import { useState } from 'react';
-import { LoadingPage } from './components/LoadingPage';
-import { QuizPage } from './components/QuizPage';
-import { RecapPage } from './components/RecapPage';
-import { UploadPage } from './components/UploadPage';
-import type { AppPage, QuizQuestion, RecapData } from './types';
-import { generateQuiz, generateRecap } from './utils/gemini';
-import { filterContentByYear } from './utils/parser';
+'use client';
 
-function App() {
+import { LoadingPage } from '@/components/LoadingPage';
+import { QuizPage } from '@/components/QuizPage';
+import { RecapPage } from '@/components/RecapPage';
+import { UploadPage } from '@/components/UploadPage';
+import type { QuizQuestion, RecapData } from '@/types';
+import { useState } from 'react';
+
+type AppPage = 'upload' | 'loading' | 'recap' | 'quiz';
+
+export default function Home() {
   const [page, setPage] = useState<AppPage>('upload');
   const [loadingStage, setLoadingStage] = useState<'parsing' | 'analyzing' | 'generating'>('parsing');
   const [recapData, setRecapData] = useState<RecapData | null>(null);
   const [quizData, setQuizData] = useState<QuizQuestion[] | null>(null);
   const [chatContent, setChatContent] = useState('');
-  const [apiKey, setApiKey] = useState('');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleUpload = async (content: string, _fileName: string, key: string, year: number) => {
+  const handleUpload = async (content: string, _fileName: string, year: number) => {
     setChatContent(content);
-    setApiKey(key);
     setSelectedYear(year);
     setError(null);
+    setIsLoading(true);
     setPage('loading');
     setLoadingStage('parsing');
 
     try {
-      // Filter content by selected year
-      setLoadingStage('parsing');
-      const filteredContent = filterContentByYear(content, year);
-
-      if (!filteredContent.trim()) {
-        throw new Error(`找不到 ${year} 年的對話紀錄`);
-      }
-
       await new Promise(resolve => setTimeout(resolve, 500));
       setLoadingStage('analyzing');
 
-      // Generate recap with filtered content for selected year
-      const recap = await generateRecap(key, filteredContent, year);
+      // Call server API for recap - API key is stored securely on server
+      const recapResponse = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, year }),
+      });
+
+      if (!recapResponse.ok) {
+        const errorData = await recapResponse.json();
+        throw new Error(errorData.error || '分析過程中發生錯誤');
+      }
+
+      const recap = await recapResponse.json();
       setRecapData(recap);
 
       setLoadingStage('generating');
 
-      // Generate quiz with filtered content
-      const quiz = await generateQuiz(key, filteredContent, 5);
-      setQuizData(quiz);
+      // Call server API for quiz
+      const quizResponse = await fetch('/api/quiz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content, year, count: 5 }),
+      });
 
-      // Show recap page
+      if (!quizResponse.ok) {
+        const errorData = await quizResponse.json();
+        throw new Error(errorData.error || '生成題目時發生錯誤');
+      }
+
+      const quizResult = await quizResponse.json();
+      setQuizData(quizResult.questions);
+
       setPage('recap');
     } catch (err) {
       console.error('Analysis error:', err);
       setError(err instanceof Error ? err.message : '分析過程中發生錯誤');
       setPage('upload');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -60,13 +77,23 @@ function App() {
     if (quizData) {
       setPage('quiz');
     } else {
-      // Generate quiz if not already generated
       setPage('loading');
       setLoadingStage('generating');
 
       try {
-        const quiz = await generateQuiz(apiKey, chatContent, 5);
-        setQuizData(quiz);
+        const quizResponse = await fetch('/api/quiz', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: chatContent, year: selectedYear, count: 5 }),
+        });
+
+        if (!quizResponse.ok) {
+          const errorData = await quizResponse.json();
+          throw new Error(errorData.error || '生成題目時發生錯誤');
+        }
+
+        const quizResult = await quizResponse.json();
+        setQuizData(quizResult.questions);
         setPage('quiz');
       } catch (err) {
         console.error('Quiz generation error:', err);
@@ -87,13 +114,23 @@ function App() {
   };
 
   const handleRestartQuiz = async () => {
-    // Regenerate quiz questions
     setPage('loading');
     setLoadingStage('generating');
 
     try {
-      const quiz = await generateQuiz(apiKey, chatContent, 5);
-      setQuizData(quiz);
+      const quizResponse = await fetch('/api/quiz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: chatContent, year: selectedYear, count: 5 }),
+      });
+
+      if (!quizResponse.ok) {
+        const errorData = await quizResponse.json();
+        throw new Error(errorData.error || '生成題目時發生錯誤');
+      }
+
+      const quizResult = await quizResponse.json();
+      setQuizData(quizResult.questions);
       setPage('quiz');
     } catch (err) {
       console.error('Quiz regeneration error:', err);
@@ -107,6 +144,7 @@ function App() {
       {page === 'upload' && (
         <UploadPage
           onUpload={handleUpload}
+          isLoading={isLoading}
         />
       )}
 
@@ -169,5 +207,3 @@ function App() {
     </div>
   );
 }
-
-export default App;

@@ -1,10 +1,14 @@
+import type { QuizQuestion, RecapData } from '@/types';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import type { QuizQuestion, RecapData } from '../types';
 
 /**
- * Initialize Gemini API client
+ * Initialize Gemini API client (server-side only)
  */
-function getGeminiClient(apiKey: string) {
+function getGeminiClient() {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error('GEMINI_API_KEY environment variable is not set');
+  }
   return new GoogleGenerativeAI(apiKey);
 }
 
@@ -12,11 +16,10 @@ function getGeminiClient(apiKey: string) {
  * Generate yearly recap from chat content
  */
 export async function generateRecap(
-  apiKey: string, 
   chatContent: string,
-  year: number = new Date().getFullYear()
+  year: number
 ): Promise<RecapData> {
-  const genAI = getGeminiClient(apiKey);
+  const genAI = getGeminiClient();
   const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
   
   const prompt = `你是一位專業的對話分析師，請分析以下 LINE 對話紀錄，生成 ${year} 年度回顧報告。
@@ -91,11 +94,10 @@ ${chatContent.slice(0, 50000)}
  * Generate quiz questions from chat content
  */
 export async function generateQuiz(
-  apiKey: string,
   chatContent: string,
   count: number = 5
 ): Promise<QuizQuestion[]> {
-  const genAI = getGeminiClient(apiKey);
+  const genAI = getGeminiClient();
   const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
   
   const prompt = `你是一位有趣的題目設計師，請根據以下 LINE 對話紀錄生成 ${count} 道選擇題，用來測試參與者對這段對話的記憶。

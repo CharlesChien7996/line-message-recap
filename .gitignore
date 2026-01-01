@@ -1,9 +1,10 @@
 # Dependencies
 node_modules/
+.pnpm-store/
 
-# Build output
-dist/
-dist-ssr/
+# Next.js build output
+.next/
+out/
 
 # Local env files
 .env.local
@@ -27,3 +28,10 @@ Thumbs.db
 *.log
 npm-debug.log*
 pnpm-debug.log*
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts

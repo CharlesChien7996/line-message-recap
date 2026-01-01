@@ -1,27 +1,22 @@
+'use client';
+
+import { extractAvailableYears } from '@/lib/parser';
 import { useRef, useState, type ChangeEvent, type DragEvent } from 'react';
-import { extractAvailableYears } from '../utils/parser';
 
 interface UploadPageProps {
-  onUpload: (content: string, fileName: string, apiKey: string, year: number) => void;
+  onUpload: (content: string, fileName: string, year: number) => void;
+  isLoading?: boolean;
 }
 
-// 從環境變數取得預設 API Key
-const DEFAULT_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
-
-export function UploadPage({ onUpload }: UploadPageProps) {
+export function UploadPage({ onUpload, isLoading }: UploadPageProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [fileContent, setFileContent] = useState<string>('');
   const [availableYears, setAvailableYears] = useState<number[]>([]);
-  const [apiKey, setApiKey] = useState('');
-  const [useCustomKey, setUseCustomKey] = useState(!DEFAULT_API_KEY);
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [error, setError] = useState('');
   const [isParsingFile, setIsParsingFile] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // 取得實際使用的 API Key
-  const effectiveApiKey = useCustomKey ? apiKey : DEFAULT_API_KEY;
 
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -67,18 +62,15 @@ export function UploadPage({ onUpload }: UploadPageProps) {
     setIsParsingFile(true);
 
     try {
-      // 讀取檔案內容並解析年份
       const content = await f.text();
       setFileContent(content);
 
       const years = extractAvailableYears(content);
       setAvailableYears(years);
 
-      // 預設選擇最新的年份
       if (years.length > 0) {
         setSelectedYear(years[0]);
       } else {
-        // 如果沒有檢測到年份，使用當前年份
         setSelectedYear(new Date().getFullYear());
         setAvailableYears([new Date().getFullYear()]);
       }
@@ -95,17 +87,12 @@ export function UploadPage({ onUpload }: UploadPageProps) {
       return;
     }
 
-    if (!effectiveApiKey.trim()) {
-      setError('請輸入 Gemini API Key');
-      return;
-    }
-
     if (!selectedYear) {
       setError('請選擇回顧年份');
       return;
     }
 
-    onUpload(fileContent, file.name, effectiveApiKey.trim(), selectedYear);
+    onUpload(fileContent, file.name, selectedYear);
   };
 
   const handleZoneClick = () => {
@@ -184,7 +171,7 @@ export function UploadPage({ onUpload }: UploadPageProps) {
           )}
         </div>
 
-        {/* Year Selection - 只在檔案上傳後顯示 */}
+        {/* Year Selection */}
         {file && (
           <div className="animate-fade-in-up stagger-2" style={{ marginBottom: 'var(--space-xl)' }}>
             <label
@@ -237,102 +224,6 @@ export function UploadPage({ onUpload }: UploadPageProps) {
           </div>
         )}
 
-        {/* API Key Section */}
-        <div className="animate-fade-in-up stagger-2" style={{ marginBottom: 'var(--space-xl)' }}>
-          {DEFAULT_API_KEY ? (
-            // 有預設 API Key 時顯示切換選項
-            <>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: 'var(--space-md)'
-              }}>
-                <span style={{ color: 'var(--text-secondary)', fontSize: 'var(--font-size-sm)' }}>
-                  Gemini API Key
-                </span>
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => setUseCustomKey(!useCustomKey)}
-                  style={{ fontSize: 'var(--font-size-xs)' }}
-                >
-                  {useCustomKey ? '使用預設 Key' : '使用自訂 Key'}
-                </button>
-              </div>
-
-              {useCustomKey ? (
-                <input
-                  id="apiKey"
-                  type="password"
-                  className={`input ${error && !apiKey ? 'input-error' : ''}`}
-                  placeholder="輸入你的 Gemini API Key"
-                  value={apiKey}
-                  onChange={(e) => {
-                    setApiKey(e.target.value);
-                    setError('');
-                  }}
-                />
-              ) : (
-                <div
-                  className="glass-card"
-                  style={{
-                    padding: 'var(--space-md) var(--space-lg)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 'var(--space-sm)'
-                  }}
-                >
-                  <span style={{ color: 'var(--accent)' }}>✓</span>
-                  <span style={{ color: 'var(--text-secondary)' }}>已設定預設 API Key</span>
-                </div>
-              )}
-            </>
-          ) : (
-            // 沒有預設 API Key 時顯示輸入框
-            <>
-              <label
-                htmlFor="apiKey"
-                style={{
-                  display: 'block',
-                  marginBottom: 'var(--space-sm)',
-                  color: 'var(--text-secondary)',
-                  fontSize: 'var(--font-size-sm)'
-                }}
-              >
-                Gemini API Key
-              </label>
-              <input
-                id="apiKey"
-                type="password"
-                className={`input ${error && !apiKey ? 'input-error' : ''}`}
-                placeholder="輸入你的 Gemini API Key"
-                value={apiKey}
-                onChange={(e) => {
-                  setApiKey(e.target.value);
-                  setError('');
-                }}
-              />
-              <p style={{
-                marginTop: 'var(--space-sm)',
-                fontSize: 'var(--font-size-xs)',
-                color: 'var(--text-muted)'
-              }}>
-                請至{' '}
-                <a
-                  href="https://makersuite.google.com/app/apikey"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: 'var(--primary-light)' }}
-                >
-                  Google AI Studio
-                </a>
-                {' '}取得免費的 API Key
-              </p>
-            </>
-          )}
-        </div>
-
         {/* Error Message */}
         {error && (
           <div
@@ -356,13 +247,22 @@ export function UploadPage({ onUpload }: UploadPageProps) {
           <button
             className="btn btn-primary btn-lg"
             onClick={handleSubmit}
-            disabled={!file || !effectiveApiKey || !selectedYear || isParsingFile}
+            disabled={!file || !selectedYear || isParsingFile || isLoading}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 20, height: 20 }}>
-              <circle cx="12" cy="12" r="10" />
-              <polygon points="10 8 16 12 10 16 10 8" fill="currentColor" />
-            </svg>
-            開始分析
+            {isLoading ? (
+              <>
+                <div className="spinner" style={{ width: 20, height: 20 }} />
+                分析中...
+              </>
+            ) : (
+              <>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 20, height: 20 }}>
+                  <circle cx="12" cy="12" r="10" />
+                  <polygon points="10 8 16 12 10 16 10 8" fill="currentColor" />
+                </svg>
+                開始分析
+              </>
+            )}
           </button>
         </div>
 
