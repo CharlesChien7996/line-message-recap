@@ -52,7 +52,7 @@ export default function Home() {
       const quizResponse = await fetch('/api/quiz', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, year, count: 5 }),
+        body: JSON.stringify({ content, year, count: 10 }),
       });
 
       if (!quizResponse.ok) {
@@ -84,7 +84,7 @@ export default function Home() {
         const quizResponse = await fetch('/api/quiz', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content: chatContent, year: selectedYear, count: 5 }),
+          body: JSON.stringify({ content: chatContent, year: selectedYear, count: 10 }),
         });
 
         if (!quizResponse.ok) {
@@ -121,7 +121,7 @@ export default function Home() {
       const quizResponse = await fetch('/api/quiz', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: chatContent, year: selectedYear, count: 5 }),
+        body: JSON.stringify({ content: chatContent, year: selectedYear, count: 10 }),
       });
 
       if (!quizResponse.ok) {
