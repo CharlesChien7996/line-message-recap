@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/components/loadingpage.tsx","./src/components/quizpage.tsx","./src/components/recappage.tsx","./src/components/uploadpage.tsx","./src/types/index.ts","./src/utils/gemini.ts","./src/utils/parser.ts"],"version":"5.6.3"}
