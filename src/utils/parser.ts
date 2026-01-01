@@ -199,3 +199,107 @@ export function extractTextContent(messages: ChatMessage[]): string {
     .map(m => `${m.sender}: ${m.content}`)
     .join('\n');
 }
+
+/**
+ * Extract available years from chat content (quick scan without full parsing)
+ */
+export function extractAvailableYears(content: string): number[] {
+  const yearSet = new Set<number>();
+  
+  // Quick regex to find year patterns in the content
+  const yearPatterns = [
+    /\[(\d{4})\/\d{1,2}\/\d{1,2}/g,           // [2024/12/25
+    /^(\d{4})\/\d{1,2}\/\d{1,2}（/gm,          // 2024/12/25（
+    /^(\d{4})\.\d{1,2}\.\d{1,2}\s/gm,         // 2024.12.25 
+    /^(\d{4})-\d{1,2}-\d{1,2}\s/gm,           // 2024-12-25 
+  ];
+  
+  for (const pattern of yearPatterns) {
+    let match;
+    while ((match = pattern.exec(content)) !== null) {
+      const year = parseInt(match[1], 10);
+      if (year >= 2010 && year <= 2030) {
+        yearSet.add(year);
+      }
+    }
+  }
+  
+  // Sort years in descending order (newest first)
+  return Array.from(yearSet).sort((a, b) => b - a);
+}
+
+/**
+ * Get date range info from parsed chat
+ */
+export function getDateRangeInfo(parsedChat: ParsedChat): {
+  startYear: number | null;
+  endYear: number | null;
+  availableYears: number[];
+} {
+  if (!parsedChat.startDate || !parsedChat.endDate) {
+    return { startYear: null, endYear: null, availableYears: [] };
+  }
+  
+  const startYear = parsedChat.startDate.getFullYear();
+  const endYear = parsedChat.endDate.getFullYear();
+  
+  const availableYears: number[] = [];
+  for (let year = endYear; year >= startYear; year--) {
+    availableYears.push(year);
+  }
+  
+  return { startYear, endYear, availableYears };
+}
+
+/**
+ * Filter raw chat content to only include messages from a specific year
+ * This is used to send only relevant content to the AI for analysis
+ */
+export function filterContentByYear(content: string, year: number): string {
+  const lines = content.split('\n');
+  const filteredLines: string[] = [];
+  let currentDateYear: number | null = null;
+  let includeFollowingMessages = false;
+  
+  // Patterns to detect year in date formats
+  const datePatterns = [
+    /^\[(\d{4})\/\d{1,2}\/\d{1,2}/,           // [2024/12/25
+    /^(\d{4})\/\d{1,2}\/\d{1,2}（/,            // 2024/12/25（
+    /^(\d{4})\.\d{1,2}\.\d{1,2}\s/,           // 2024.12.25 
+    /^(\d{4})-\d{1,2}-\d{1,2}\s/,             // 2024-12-25 
+  ];
+  
+  for (const line of lines) {
+    // Check if line contains a date
+    let lineYear: number | null = null;
+    
+    for (const pattern of datePatterns) {
+      const match = line.match(pattern);
+      if (match) {
+        lineYear = parseInt(match[1], 10);
+        break;
+      }
+    }
+    
+    if (lineYear !== null) {
+      // This line has a date, update current year tracking
+      currentDateYear = lineYear;
+      includeFollowingMessages = (lineYear === year);
+    }
+    
+    // Include line if it's from the target year
+    if (includeFollowingMessages || currentDateYear === year) {
+      // For lines with dates, only include if year matches
+      if (lineYear !== null) {
+        if (lineYear === year) {
+          filteredLines.push(line);
+        }
+      } else if (currentDateYear === year) {
+        // For lines without dates (continuation messages), include if current context is target year
+        filteredLines.push(line);
+      }
+    }
+  }
+  
+  return filteredLines.join('\n');
+}

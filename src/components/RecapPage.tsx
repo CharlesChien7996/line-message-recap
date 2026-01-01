@@ -2,11 +2,12 @@ import type { RecapData } from '../types';
 
 interface RecapPageProps {
   data: RecapData;
+  year: number;
   onStartQuiz: () => void;
   onBack: () => void;
 }
 
-export function RecapPage({ data, onStartQuiz, onBack }: RecapPageProps) {
+export function RecapPage({ data, year, onStartQuiz, onBack }: RecapPageProps) {
   const { stats, highlights, topTopics, mood, memories, yearSummary, friendshipScore } = data;
 
   return (
@@ -20,7 +21,7 @@ export function RecapPage({ data, onStartQuiz, onBack }: RecapPageProps) {
         }}>
           <div className="animate-fade-in-down">
             <span className="badge badge-primary" style={{ marginBottom: 'var(--space-md)' }}>
-              {new Date().getFullYear()} 年度回顧
+              {year} 年度回顧
             </span>
             <h1 style={{ marginBottom: 'var(--space-lg)' }}>
               <span className="text-gradient">你們的對話故事</span>

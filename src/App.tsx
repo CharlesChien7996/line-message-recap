@@ -5,6 +5,7 @@ import { RecapPage } from './components/RecapPage';
 import { UploadPage } from './components/UploadPage';
 import type { AppPage, QuizQuestion, RecapData } from './types';
 import { generateQuiz, generateRecap } from './utils/gemini';
+import { filterContentByYear } from './utils/parser';
 
 function App() {
   const [page, setPage] = useState<AppPage>('upload');
@@ -13,28 +14,37 @@ function App() {
   const [quizData, setQuizData] = useState<QuizQuestion[] | null>(null);
   const [chatContent, setChatContent] = useState('');
   const [apiKey, setApiKey] = useState('');
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [error, setError] = useState<string | null>(null);
 
-  const handleUpload = async (content: string, _fileName: string, key: string) => {
+  const handleUpload = async (content: string, _fileName: string, key: string, year: number) => {
     setChatContent(content);
     setApiKey(key);
+    setSelectedYear(year);
     setError(null);
     setPage('loading');
     setLoadingStage('parsing');
 
     try {
-      // Simulating parsing stage
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Filter content by selected year
+      setLoadingStage('parsing');
+      const filteredContent = filterContentByYear(content, year);
+
+      if (!filteredContent.trim()) {
+        throw new Error(`找不到 ${year} 年的對話紀錄`);
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 500));
       setLoadingStage('analyzing');
 
-      // Generate recap
-      const recap = await generateRecap(key, content);
+      // Generate recap with filtered content for selected year
+      const recap = await generateRecap(key, filteredContent, year);
       setRecapData(recap);
 
       setLoadingStage('generating');
 
-      // Generate quiz
-      const quiz = await generateQuiz(key, content, 5);
+      // Generate quiz with filtered content
+      const quiz = await generateQuiz(key, filteredContent, 5);
       setQuizData(quiz);
 
       // Show recap page
@@ -107,6 +117,7 @@ function App() {
       {page === 'recap' && recapData && (
         <RecapPage
           data={recapData}
+          year={selectedYear}
           onStartQuiz={handleStartQuiz}
           onBack={handleBack}
         />

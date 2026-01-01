@@ -1,7 +1,8 @@
 import { useRef, useState, type ChangeEvent, type DragEvent } from 'react';
+import { extractAvailableYears } from '../utils/parser';
 
 interface UploadPageProps {
-  onUpload: (content: string, fileName: string, apiKey: string) => void;
+  onUpload: (content: string, fileName: string, apiKey: string, year: number) => void;
 }
 
 // 從環境變數取得預設 API Key
@@ -10,9 +11,13 @@ const DEFAULT_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
 export function UploadPage({ onUpload }: UploadPageProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [fileContent, setFileContent] = useState<string>('');
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [apiKey, setApiKey] = useState('');
   const [useCustomKey, setUseCustomKey] = useState(!DEFAULT_API_KEY);
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
   const [error, setError] = useState('');
+  const [isParsingFile, setIsParsingFile] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 取得實際使用的 API Key
@@ -45,7 +50,7 @@ export function UploadPage({ onUpload }: UploadPageProps) {
     }
   };
 
-  const validateAndSetFile = (f: File) => {
+  const validateAndSetFile = async (f: File) => {
     setError('');
 
     if (!f.name.endsWith('.txt')) {
@@ -59,10 +64,33 @@ export function UploadPage({ onUpload }: UploadPageProps) {
     }
 
     setFile(f);
+    setIsParsingFile(true);
+
+    try {
+      // 讀取檔案內容並解析年份
+      const content = await f.text();
+      setFileContent(content);
+
+      const years = extractAvailableYears(content);
+      setAvailableYears(years);
+
+      // 預設選擇最新的年份
+      if (years.length > 0) {
+        setSelectedYear(years[0]);
+      } else {
+        // 如果沒有檢測到年份，使用當前年份
+        setSelectedYear(new Date().getFullYear());
+        setAvailableYears([new Date().getFullYear()]);
+      }
+    } catch {
+      setError('讀取檔案時發生錯誤');
+    } finally {
+      setIsParsingFile(false);
+    }
   };
 
   const handleSubmit = async () => {
-    if (!file) {
+    if (!file || !fileContent) {
       setError('請選擇對話紀錄檔案');
       return;
     }
@@ -72,12 +100,12 @@ export function UploadPage({ onUpload }: UploadPageProps) {
       return;
     }
 
-    try {
-      const content = await file.text();
-      onUpload(content, file.name, effectiveApiKey.trim());
-    } catch {
-      setError('讀取檔案時發生錯誤');
+    if (!selectedYear) {
+      setError('請選擇回顧年份');
+      return;
     }
+
+    onUpload(fileContent, file.name, effectiveApiKey.trim(), selectedYear);
   };
 
   const handleZoneClick = () => {
@@ -155,6 +183,59 @@ export function UploadPage({ onUpload }: UploadPageProps) {
             </>
           )}
         </div>
+
+        {/* Year Selection - 只在檔案上傳後顯示 */}
+        {file && (
+          <div className="animate-fade-in-up stagger-2" style={{ marginBottom: 'var(--space-xl)' }}>
+            <label
+              htmlFor="year"
+              style={{
+                display: 'block',
+                marginBottom: 'var(--space-sm)',
+                color: 'var(--text-secondary)',
+                fontSize: 'var(--font-size-sm)'
+              }}
+            >
+              📅 回顧年份
+            </label>
+
+            {isParsingFile ? (
+              <div style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-sm)' }}>
+                正在解析檔案...
+              </div>
+            ) : availableYears.length > 0 ? (
+              <>
+                <div style={{ display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
+                  {availableYears.map((year: number) => (
+                    <button
+                      key={year}
+                      type="button"
+                      onClick={() => setSelectedYear(year)}
+                      className={`btn ${selectedYear === year ? 'btn-primary' : 'btn-secondary'}`}
+                      style={{
+                        padding: 'var(--space-sm) var(--space-md)',
+                        fontSize: 'var(--font-size-sm)'
+                      }}
+                    >
+                      {year}
+                    </button>
+                  ))}
+                </div>
+                <p style={{
+                  marginTop: 'var(--space-sm)',
+                  fontSize: 'var(--font-size-xs)',
+                  color: 'var(--text-muted)'
+                }}>
+                  偵測到聊天紀錄涵蓋 {availableYears[availableYears.length - 1]} - {availableYears[0]} 年
+                </p>
+              </>
+            ) : (
+              <div style={{ color: 'var(--text-tertiary)', fontSize: 'var(--font-size-sm)' }}>
+                無法偵測年份，將使用當前年份
+              </div>
+            )}
+          </div>
+        )}
 
         {/* API Key Section */}
         <div className="animate-fade-in-up stagger-2" style={{ marginBottom: 'var(--space-xl)' }}>
@@ -275,7 +356,7 @@ export function UploadPage({ onUpload }: UploadPageProps) {
           <button
             className="btn btn-primary btn-lg"
             onClick={handleSubmit}
-            disabled={!file || !effectiveApiKey}
+            disabled={!file || !effectiveApiKey || !selectedYear || isParsingFile}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 20, height: 20 }}>
               <circle cx="12" cy="12" r="10" />
