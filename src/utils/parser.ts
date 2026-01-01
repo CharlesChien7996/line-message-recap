@@ -211,7 +211,9 @@ export function extractAvailableYears(content: string): number[] {
     /\[(\d{4})\/\d{1,2}\/\d{1,2}/g,           // [2024/12/25
     /^(\d{4})\/\d{1,2}\/\d{1,2}（/gm,          // 2024/12/25（
     /^(\d{4})\.\d{1,2}\.\d{1,2}\s/gm,         // 2024.12.25 
-    /^(\d{4})-\d{1,2}-\d{1,2}\s/gm,           // 2024-12-25 
+    /^(\d{4})-\d{1,2}-\d{1,2}\s/gm,           // 2024-12-25
+    /^[一二三四五六日],\s*\d{1,2}\/\d{1,2}\/(\d{4})/gm,  // 五, 11/29/2024 (mobile format)
+    /\d{1,2}\/\d{1,2}\/(\d{4})/g,             // MM/DD/YYYY anywhere
   ];
   
   for (const pattern of yearPatterns) {
@@ -262,18 +264,19 @@ export function filterContentByYear(content: string, year: number): string {
   let includeFollowingMessages = false;
   
   // Patterns to detect year in date formats
-  const datePatterns = [
-    /^\[(\d{4})\/\d{1,2}\/\d{1,2}/,           // [2024/12/25
-    /^(\d{4})\/\d{1,2}\/\d{1,2}（/,            // 2024/12/25（
-    /^(\d{4})\.\d{1,2}\.\d{1,2}\s/,           // 2024.12.25 
-    /^(\d{4})-\d{1,2}-\d{1,2}\s/,             // 2024-12-25 
+  const datePatterns: Array<{pattern: RegExp, yearGroup: number}> = [
+    {pattern: /^\[(\d{4})\/\d{1,2}\/\d{1,2}/, yearGroup: 1},           // [2024/12/25
+    {pattern: /^(\d{4})\/\d{1,2}\/\d{1,2}（/, yearGroup: 1},            // 2024/12/25（
+    {pattern: /^(\d{4})\.\d{1,2}\.\d{1,2}\s/, yearGroup: 1},           // 2024.12.25 
+    {pattern: /^(\d{4})-\d{1,2}-\d{1,2}\s/, yearGroup: 1},             // 2024-12-25
+    {pattern: /^[一二三四五六日],\s*\d{1,2}\/\d{1,2}\/(\d{4})/, yearGroup: 1},  // 五, 11/29/2024 (mobile format)
   ];
   
   for (const line of lines) {
     // Check if line contains a date
     let lineYear: number | null = null;
     
-    for (const pattern of datePatterns) {
+    for (const {pattern} of datePatterns) {
       const match = line.match(pattern);
       if (match) {
         lineYear = parseInt(match[1], 10);
